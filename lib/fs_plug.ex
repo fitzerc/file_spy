@@ -1,12 +1,27 @@
 defmodule FsPlug do
-  import Plug.Conn
+  use Plug.Router
 
-  def init(_opts) do
+  plug(Plug.Logger)
+  plug(:match)
+  plug(:dispatch)
+
+  get "/" do
+    send_resp(conn, 200, """
+    Use console to interact using websockets
+
+    sock  = new WebSocket("ws://localhost:4000/websocket")
+    sock.addEventListener("message", console.log)
+    sock.addEventListener("open", () => sock.send("ping"))
+    """)
   end
 
-  def call(conn, _opts) do
+  get "/websocket" do
     conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(200, "Hello world!!!")
+    |> WebSockAdapter.upgrade(FsSocketHandler, [], timeout: 60_000)
+    |> halt()
+  end
+
+  match _ do
+    send_resp(conn, 404, "not found")
   end
 end
