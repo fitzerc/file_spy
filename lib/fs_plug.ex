@@ -6,19 +6,33 @@ defmodule FsPlug do
   plug(:dispatch)
 
   get "/" do
-    send_resp(conn, 200, """
-    Use console to interact using websockets
+    case File.read("lib/templates/index.html") do
+      {:ok, html_content} ->
+        send_resp(conn, 200, html_content)
 
-    sock  = new WebSocket("ws://localhost:4000/websocket")
-    sock.addEventListener("message", console.log)
-    sock.addEventListener("open", () => sock.send("ping"))
-    """)
+      {:error, reason} ->
+        send_resp(conn, 500, "Failed to load HTML: #{reason}")
+    end
   end
 
-  get "/websocket" do
+  get "/websocket/:string" do
+    IO.inspect(conn)
+
     conn
-    |> WebSockAdapter.upgrade(FsSocketHandler, [], timeout: 60_000)
+    |> WebSockAdapter.upgrade(FsSocketHandler, [path: conn.params["string"]], timeout: 60_000)
     |> halt()
+  end
+
+  get "/:string" do
+    IO.puts(conn.params["string"])
+
+    case File.read("lib/templates/spy_file.html") do
+      {:ok, html_content} ->
+        send_resp(conn, 200, html_content)
+
+      {:error, reason} ->
+        send_resp(conn, 500, "Failed to load HTML: #{reason}")
+    end
   end
 
   match _ do

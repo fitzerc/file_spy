@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>File Spy</title>
+
+    <script>
+      function openFilePath() {
+        //Get the value from the input field
+        const filePath = document.getElementById("filePath").value;
+
+        //Open a new tab with the input as the endpoint
+        if (filePath) {
+          const baseUrl = window.location.origin;
+          const newUrl = `${baseUrl}/${encodeURIComponent(filePath)}`;
+
+          window.open(newUrl, "_blank");
+        } else {
+          alert("Please enter a file path.");
+        }
+      }
+    </script>
+
+    <style>
+      body {
+        background-color: #121212;
+        color: #ffffff;
+      }
+      
+      button {
+        background-color: #333333;
+        color: #ffffff;
+        border: none;
+        padding: 10px;
+        cursor: pointer;
+      }
+      
+      button:hover {
+        background-color: #555555;
+      }
+    </style>
+
+  </head>
+  <body>
+    Enter path of file to spy
+    </p>
+
+    <input type="text" id="filePath" placeholder="Enter file path here" >
+    <button onclick="openFilePath()">Spy File</button>
+  </body>
+</html>

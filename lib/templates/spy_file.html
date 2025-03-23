@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>File Spy</title>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        //Get the URL's pathname (endpoint)
+        const filePath = window.location.pathname;
+        
+        //Display the endpoint on the screen
+        const decodedUri = decodeURIComponent(filePath);
+        document.getElementById("file_path").textContent = `Path: ${decodedUri.substring(1, decodedUri.length)}`;
+
+        var sock = new WebSocket("ws://localhost:4000/websocket" + filePath);
+        sock.addEventListener("message", function(m) {
+          addMsgToScreen(m);
+        });
+
+        function addMsgToScreen(m) {
+          console.log(m);
+          const container = document.getElementById("messages");
+          const newElement = document.createElement("div");
+          newElement.textContent = m.data;
+          container.appendChild(newElement);
+        }
+      });
+    </script>
+
+    <style>
+      body {
+        background-color: #121212;
+        color: #ffffff;
+      }
+    </style>
+
+  </head>
+  <body>
+    <h1>Spying File</h1>
+    <p id="file_path"></p>
+    </p>
+
+    <div id="messages" style="border: 1px solid #ccc; padding: 10px; width: 300px; height: 200px; overflow-y: auto;">
+    </div>
+  </body>
+</html>
