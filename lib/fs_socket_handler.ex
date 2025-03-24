@@ -1,47 +1,54 @@
 defmodule FsSocketHandler do
   @behaviour WebSock
 
-  def init(path: path) do
-    IO.puts("FsSocket: init")
-    IO.inspect(path)
-    send_periodic_message(self())
-    {:ok, %{count: 0, path: path}}
+  @poll_interval 2000
+
+  def init(path: file_path) do
+    IO.puts("spy file init for path:")
+    IO.inspect(file_path)
+
+    # Read and send the initial file content line by line
+    file_lines = File.stream!(file_path) |> Enum.map(&String.trim/1)
+    # Start polling for changes
+    send_polling_message(self())
+
+    # push existing lines to socket
+    {:push, Enum.map(file_lines, fn line -> {:text, line} end),
+     %{file_path: file_path, lines: file_lines}}
   end
 
-  def handle_in({message, [opcode: :text]}, state) do
-    IO.puts("FsSocket: :text message")
-    IO.inspect(message)
-    IO.puts("STATE:")
-    IO.inspect(state)
-    {:reply, :ok, {:text, "Received: #{message}"}, %{state | count: state.count + 1}}
+  # ignore incoming requests
+  def handle_in(_message, state), do: {:ok, state}
+
+  def handle_info(:poll_file, state) do
+    # Schedule the next poll
+    send_polling_message(self())
+
+    # Send updated file contents
+    file_lines = File.stream!(state.file_path) |> Enum.map(&String.trim/1)
+
+    case file_lines == state.lines do
+      # don't do anything if file didn't change
+      true ->
+        IO.puts("no change")
+        {:ok, state}
+
+      false ->
+        # send new line
+        IO.puts("pushing change")
+        {:push, {:text, List.last(file_lines)}, %{state | lines: file_lines}}
+    end
   end
 
-  def handle_in(message, state) do
-    IO.puts("FsSocket: message")
-    IO.inspect(message)
-    IO.puts("STATE:")
-    IO.inspect(state)
-    {:ok, state}
-  end
-
-  # {:reply, {:text, "Periodic message: 0"}, %{count: 1}}
-  def handle_info(:send_message, state) do
-    IO.inspect(state)
-    send_periodic_message(self())
-    {:push, {:text, "Periodic message: #{state.count}"}, %{state | count: state.count + 1}}
-  end
-
-  def handle_info(_info, state) do
-    IO.puts("FsSocket: info")
-    {:ok, state}
-  end
+  def handle_info(_info, state), do: {:ok, state}
 
   def terminate(_reason, _state) do
-    IO.puts("FsSocket: terminate")
-    :ok
+    IO.puts("spy file terminate")
+    {:ok}
   end
 
-  defp send_periodic_message(pid) do
-    Process.send_after(pid, :send_message, 1_000)
+  # Helper to schedule polling
+  defp send_polling_message(socket) do
+    Process.send_after(socket, :poll_file, @poll_interval)
   end
 end
